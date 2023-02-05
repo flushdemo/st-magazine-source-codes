@@ -1,11 +1,10 @@
-Buffer$=Space(512)
-Buffer%=Varptr(Buffer$)
-
-Alpha=-Pi/2
-Repeat
-	Dpoke Buffer%,16384*Sin(-Alpha)
-	Buffer%=Buffer%+2
-	Alpha=Alpha+Pi/360
-Until Alpha>=3/2*Pi
-Bsave "sinus.cnx",Varptr(Buffer$),Buffer%-Varptr(Buffer$)
-End
+buffer$=SPACE$(512)
+buffer%=VARPTR(buffer$)
+alpha=-PI/2
+REPEAT
+  DPOKE buffer%,16384*SIN(-alpha)
+  buffer%=buffer%+2
+  alpha=alpha+PI/360
+UNTIL alpha>=3/2*PI
+BSAVE "sinus.cnx",VARPTR(buffer$),buffer%-VARPTR(buffer$)
+END

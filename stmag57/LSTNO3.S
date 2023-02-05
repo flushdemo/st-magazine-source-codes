@@ -34,6 +34,9 @@ Problem:
 Demo:
 	movem.l	d0-a6,-(sp)
 	bsr	SaveInterrupts
+	bsr	InitDemo
+MainLoop:
+	bsr	WaitFrame
 	bsr	DemoScroll
 	cmp	#$b9,$fffffc02.w
 	bne.s	MainLoop
@@ -48,14 +51,14 @@ SaveInterrupts:
 	dc.w	$a00a
 	movem.l	d0-a6,-(sp)
 	lea	Vectors(pc),a6
-	move.l	$70.w,Vbl(a6)
-	move.l	$0134.w,Timera(a6)
-	move.l	$0120.w,Timerb(a6)
-	move.l	$0114.w,Timerc(a6)
-	move.l	$0110.w,Timerd(a6)
-	lea	VideoRegisters(a6),a1
+	move.l	$70.w,Vbl-Vectors(a6)
+	move.l	$0134.w,Timera-Vectors(a6)
+	move.l	$0120.w,Timerb-Vectors(a6)
+	move.l	$0114.w,Timerc-Vectors(a6)
+	move.l	$0110.w,Timerd-Vectors(a6)
+	lea	VideoRegisters-Vectors(a6),a1
 	movea.w	#$8200,a0
-	movep.w	(a0),d0
+	movep.w	1(a0),d0
 	move.w	d0,(a1)+
 	move.w	$60(a0),(a1)+
 	movem.l	$40(a0),d0-d7
@@ -74,18 +77,18 @@ ResetInterrupts:
 	move.l	a0,$70.w
 	stop #$2300
 	stop #$2300
-	lea	VideoRegisters(a6),a1
+	lea	VideoRegisters-Vectors(a6),a1
 	movea.w	#$8200,a0
 	move.w	(a1)+,d0
 	movep.w	d0,1(a0)
 	move.w	(a1)+,$60(a0)
 	movem.l	(a1),d0-d7
 	movem.l	d0-d7,$40(a0)
-	move.l	Vbl(a6),$70.w
-	move.l	Timera(a6),$0134.w
-	move.l	Timerb(a6),$0120.w
-	move.l	Timerc(a6),$0114.w
-	move.l	Timerd(a6),$0110.w
+	move.l	Vbl-Vectors(a6),$70.w
+	move.l	Timera-Vectors(a6),$0134.w
+	move.l	Timerb-Vectors(a6),$0120.w
+	move.l	Timerc-Vectors(a6),$0114.w
+	move.l	Timerd-Vectors(a6),$0110.w
 ;Restore Mfp Regs ($FFFA03 - $FFFA25)
 	lea	$fffffa00.w,a1
 	move.l	#$04001e64,d0
@@ -104,8 +107,10 @@ ResetInterrupts:
 	bsr	FlushKeyboard
 	move.b	#$08,$fffffc02.w
 	rts
+
 vblfake:
 	rte
+
 FlushKeyboard:
 	movem.l	d0-a6,-(sp)
 	move.b	#$13,$fffffc02.w
@@ -124,6 +129,7 @@ Flush:
 	move.b	#$11,$fffffc02.w
 	movem.l	(sp)+,d0-a6
 	rts
+
 Vectors:
 Vbl:	dc.l	0
 Timera:	dc.l	0
@@ -136,13 +142,13 @@ InitDemo:
 	movem.l	d0-a6,-(sp)
 	move.l	$ffff8200.w,d7
 	lsl.w	#8,d7
-	lea	screenadd(pc),a0
+	lea	screensadd(pc),a0
 	and.l	#$ffff00,d7
 	move.l	d7,(a0)+
 	lea	database(pc),a1
 	adda.l	#screen2-database,a1
 	move.l	a1,d7
-	and.l	#ffff00,d7
+	and.l	#$ffff00,d7
 	move.l	d7,(a0)+
 	bsr	Cls
 	lea	database(pc),a0
@@ -158,23 +164,36 @@ InitDemo:
 	move.l	(sp)+,$70.w
 	stop	#$2300
 	stop	#$2300
+	move.l	#$0777,$ffff8240.w
+	movem.l	(sp)+,d0-a6
+	rts
+
+EndDemo:
+	movem.l	d0-a6,-(sp)
+	pea	vblfake(pc)
+	move.l	(sp)+,70.w
+	stop	#$2300
+	stop	#$2300
 	bsr	Cls
 	movem.l	(sp)+,d0-a6
 	rts
+
 Cls:
 	movea.w	#8240,a0
 	moveq	#7,d0
 ClearPal:
 	clr.l	(a0)+
 	dbra	d0,ClearPal
-	movem.l	screenadd(pc),a0-a1
+	movem.l	screensadd(pc),a0-a1
 	move.w	#7999,d0
 ClearScreens:
 	clr.l	(a0)+
 	clr.l	(a1)+
 	dbra	d0,ClearScreens
 	rts
+
 fontsdisplayed	EQU 23
+
 DemoScroll:
 	movem.l	d0-a6,-(sp)
 ;efface le scrolling
@@ -194,7 +213,7 @@ clrok:
 	lea	database(pc),a3
 	adda.l	#fontsclrgenerated-database,a3
 	moveq	#0,d1
-	moveq	#fonttsdisplayed-1,d2
+	moveq	#fontsdisplayed-1,d2
 clrfont:
 	moveq	#0,d0
 	move.b	-(a2),d0
@@ -219,7 +238,7 @@ clrfont:
 	addq.l	#1,a3
 	tst.b	(a3)
 	bne.s	nonewscroll
-	lea	12+fontsdiplayed(a2),a3
+	lea	12+fontsdisplayed(a2),a3
 nonewscroll:
 	move.l	a3,(a2)
 nonewletter:
@@ -233,7 +252,7 @@ nonewletter:
 	lea	database(pc),a3
 	adda.l	#fontsgenerated-database,a3
 	movea.l	a1,a4
-	moveq	#fontsdiplayed-1,d2
+	moveq	#fontsdisplayed-1,d2
 printfont:
 	moveq	#0,d0
 	move.b	-(a2),d0
@@ -246,6 +265,7 @@ printfont:
 	dbra	d2,printfont
 	movem.l	(sp)+,d0-a6
 	rts
+
 ;routine qui precalcule la courbe
 ;decrite par le scrolling
 TablePlot:
@@ -348,6 +368,7 @@ rnd1:
 	dbra	d0,rnd1
 	movem.l	(sp)+,d0-a6
 	rts
+
 ;Genere le code de fonts 1 plan (-90 degre)
 ;de 16 de large et de x de hauteur
 ;ici, on sait que les 4 premieres
@@ -355,6 +376,7 @@ rnd1:
 nbrfonts	EQU	59
 hauteur	EQU	12
 largeur	EQU	13
+
 GenereFonts:
 	movem.l	d0-a6,-(sp)
 	lea	database(pc),a0
@@ -373,7 +395,7 @@ gen1font:
 ;codefont-fontsgenerated
 	moveq	#0,d4
 	moveq	#largeur-1,d1
-gen1ligne:
+gen1line:
 	move.w	(a0)+,d3
 	moveq	#hauteur-1,d2
 gen1column:
@@ -451,6 +473,7 @@ nopixelclr:
 	dbra	d0,gen1fontclr
 	movem.l	(sp)+,d0-a6
 	rts
+
 ;routine de synchronisation vbl
 WaitFrame:
 	movem.l	d0-d1/a0,-(sp)
@@ -467,6 +490,7 @@ Wait:
 	beq.s	Wait
 	movem.l	(sp)+,d0-d1/a0
 	rts
+
 ;routine vbl dont le seul but est
 ;de mettre a l'etat vrai un octet
 ;Frame
@@ -494,7 +518,7 @@ demoscrolltxt:
 	dc.b	'POUR $ ST MAGAZINE $ '
 	dcb.b	fontsdisplayed,' '
 	dc.w	0
-fontsgrpahix:
+fontsgraphix:
 ;cette police de caracteres a ete dessinee
 ;par Arjarn/The Vegetables que je tiens a
 ;remercier
