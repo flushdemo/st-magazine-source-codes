@@ -597,7 +597,5 @@ wavebuffer:
 screen2:
                 DS.L 8064
                 DS.L 128
-Frame:
-                DS.L 1
 mystack:
                 END
