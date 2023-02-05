@@ -61,7 +61,7 @@ SaveInterrupts:
 	movem.l	$40(a0),d0-d7
 	movem.l	d0-d7,(a1)
 	clr.l	$fffffa06.w
-	bclr	#3,$fffffa17.<
+	bclr	#3,$fffffa17.w
 	movem.l	(sp)+,d0-a6
 	move	#$2300,sr
 	rts
@@ -174,7 +174,7 @@ ClearScreens:
 	clr.l	(a1)+
 	dbra	d0,ClearScreens
 	rts
-fontsdiplayed	EQU 23
+fontsdisplayed	EQU 23
 DemoScroll:
 	movem.l	d0-a6,-(sp)
 ;efface le scrolling
@@ -211,7 +211,7 @@ clrfont:
 	lea	database(pc),a2
 	adda.l	#demoscrolltxt-database,a2
 	movea.l	(a2),a3
-	move.l	4(2),d0
+	move.l	4(a2),d0
 	add.l	#(hauteur*4)*2,d0
 	cmp.l	#(hauteur*4)*32,d0
 	blt.s	nonewletter
@@ -252,7 +252,7 @@ TablePlot:
 	dc.w	1,2,4,8,16,32,64,128
 	dc.w	256,512,1024,2048,4096,8192,16384,32768
 CircleCalcul:
-	movem.l	d0,a6,-(sp)
+	movem.l	d0-a6,-(sp)
 	lea	database(pc),a0
 	adda.l	#democosinus-database,a0
 	lea	database(pc),a1
@@ -436,5 +436,135 @@ gen1lineclr:
 gen1columnclr:
 	roxr.w	#1,d3
 	bcc.s	nopixelclr
-; A FINIR
+	move.w	#$3029,(a2)+
+;move.w xxxx(a1),d0
+	move.w	d4,(a2)+
+;xxxx
+	move.l	#$31810000,(a2)+
+;move.w d1,(a0,d0.w)
+nopixelclr:
+	addq.w	#4,d4
+	dbra	d2,gen1columnclr
+	dbra	d1,gen1lineclr
+	move.w	#$4e75,(a2)+
+;rts
+	dbra	d0,gen1fontclr
+	movem.l	(sp)+,d0-a6
+	rts
+;routine de synchronisation vbl
+WaitFrame:
+	movem.l	d0-d1/a0,-(sp)
+	lea	screensadd(pc),a0
+	movem.l	(a0),d0-d1
+	exg	d0,d1
+	movem.l	d0-d1,(a0)
+	lsr.w	#8,d1
+	move.l	d1,$ffff8200.w
+	lea	Switch(pc),a0
+	sf	(a0)
+Wait:
+	tst.b	(a0)
+	beq.s	Wait
+	movem.l	(sp)+,d0-d1/a0
+	rts
+;routine vbl dont le seul but est
+;de mettre a l'etat vrai un octet
+;Frame
+	pea	(a0)
+	lea	Switch(pc),a0
+	st	(a0)
+	movea.l	(sp)+,a0
+	rte
 
+
+	section DATA
+Switch:
+	dc.w	0
+screensadd:
+	dc.l	0,0
+database:
+democosinus:
+	INCBIN 'COSINUS.CNX'
+demosinus:
+	INCBIN 'SINUS.CNX'
+demoscrolltxt:
+	dc.l	0,0,0
+	dcb.b	fontsdisplayed,' '
+	dc.b	'ET VOICI UN SUPER EFFET DE SCROLL'
+	dc.b	'POUR $ ST MAGAZINE $ '
+	dcb.b	fontsdisplayed,' '
+	dc.w	0
+fontsgrpahix:
+;cette police de caracteres a ete dessinee
+;par Arjarn/The Vegetables que je tiens a
+;remercier
+	ds.w	13
+	dc.w	$00,$00,$00,$00,$00,$0dff,$0dff,$00,$00,$00,$00,$00,$00
+	dc.w	$00,$00,$00,$00,$00,$0f,$00,$0f,$00,$00,$00,$00,$00
+	ds.w	13
+	dc.w	0,$0c00
+	ds.w	26
+	dc.w	$00,$00,$00,$00,$00,$00,$0f,$00,$00,$00,$00,$00,$00
+	dc.w	$0801,$0801,$0402,$030c,$f0,$00,$00,$00,$00,$00,$00,$00,$00
+	dc.w	$00,$00,$00,$00,$00,$00,$00,00,$f0,$030c,$0402,$0801,$0801
+	ds.w	26
+	dc.w	$00,$00,$00,$00,$0600,$0800,$00,$00,$00,$00,$00,$00,$00
+	dc.w	$40,$40,$40,$40,$40,$40,$40,$40,$40,$40,$40,$40,$40
+	dc.w	$00,$00,$00,$00,$0600,$0600,$00,$00,$00,$00,$00,$00,$00
+	ds.w	13
+	dc.w	$30c,$f0
+	dc.w	$00,$00,$00,$00,$0800,$0800,$0fff,$0802,$0804,$00,$00,$00,$00
+	dc.w	$0c0c,$00
+	dc.w	$0402,$00
+	dc.w	$80,$80,$80,$80,$0fe0,$81,$82,$84,$88,$90,$a0,$c0,$80
+	dc.w	$0821,$083f
+	dc.w	$0422,$03fc
+	dc.w	$13,$15,$19,$11,$31,$51,$01,$0f01,$01,$01,$01,$01,$07
+	dc.w	$0440,$0380
+	dc.w	$0813,$040c
+	dc.w	$00,$00,$00,$00,$00,$060c,$060c,$00,$00,$00,$00,$00,$00
+	dc.w	$00,$00,$00,$00,$06c0,$08c0,$00,$00,$00,$00,$00,$00,$00
+	ds.w	39
+	dc.w	$0c,$12,$21,$21,$41,$0d81,$01,$01,$01,$02,$0c,$00,$00
+	ds.w	13
+	dc.w	$0800,$0fff,$0882,$84,$88,$90,$a0,$c0,$80,$0100,$0a00,$0c00,$0800
+	dc.w	$0fff,$0801
+	dc.w	$030c,$f0
+	dc.w	$fff,$801
+	dc.w	$0fff,$0801
+	dc.w	$03,$01,$01,$01,$71,$21,$21,$21,$21,$21,$0821,$0fff,$0801
+	dc.w	$30c,$f0
+	dc.w	$0801,$0fff,$0821,$20,$20,$20,$20,$20,$20,$20,$0821,$0fff,$0801
+	dc.w	$00,$00,$00,$00,$0801,$0801,$0fff,$0801,$0801,$00,$00,$00,$00
+	dc.w	$0,$80
+	dc.w	$0800,$0800,$0c01,$0202,$0104,$88,$50,$20,$40,$0881,$0fff,$0801,$00
+	dc.w	$0fff,$0801
+	dc.w	$0801,$0fff,$8001,$02,$04,$08,$10,$08,$04,$02,$0801,$0fff,$0801
+	dc.w	$0fff,$0401,$0200,$0100,$80,$40,$20,$10,$08,$04,$0802,$0fff,$0801
+	dc.w	$f0,$030c,$0402,$0402,$0801,$0801,$0801,$0801,$0801,$0402,$0402,$030c,$f0
+	dc.w	$00,$00,$1c,$22,$41,$41,$41,$41,$41,$41,$0841,$0fff,$0801
+	dc.w	$08f0,$070c,$0602,$0502,$0801,$0801,$0801,$0801,$0801,$0402,$0402,$030c,$f0
+	dc.w	$0800,$0800,$0c1c,$0222,$0141,$c1,$41,$41,$41,$41,$0841,$0fff,$0801
+	dc.w	$0812,$0c0c
+	dc.w	$03,$01,$01,$01,$01,$0801,$0fff,$0801,$01,$01,$01,$01,$03
+	dc.w	$3ff,$01
+	dc.w	$01,$03,$0d,$30,$c0,$0300,$0c00,$0300,$c0,$30,$0d,$03,$01
+	dc.w	$fff,$801
+	dc.w	$0801,$0803,$0c04,$0208,$0110,$a0,$40,$a0,$0110,$0208,$0c04,$0803,$0801
+	dc.w	$01,$03,$04,$08,$10,$0820,$0fc0,$0820,$10,$08,$04,$03,$01
+	dc.w	$0c00,$0801,$0803,$0805,$0809,$0811,$0821,$0841,$0881,$0901,$0a01,$0c01,$0803
+	
+	section BSS
+fontsgenerated:
+	ds.w	nbrfonts
+	ds.l	3600
+fontsclrgenerated:
+	ds.w	nbrfonts
+	ds.l	2900
+wavebuffer:
+	ds.l	(720+80)*hauteur
+screen2:
+	ds.l	8064
+	ds.l	128
+mystack:
+	end
