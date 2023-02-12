@@ -1,0 +1,11 @@
+'
+' Calcul d'une table de Sinus pre-multipliee par 1024
+'
+OPEN "O",#1,"SIN1024.VGT"
+j=0
+FOR i=0 TO 511
+  PRINT #1;MKI$(round(SIN(rad(j))*1024));
+  ADD j,360/512
+NEXT i
+CLOSE #1
+END
